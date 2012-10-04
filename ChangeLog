@@ -1,0 +1,29 @@
+2012-09-27  Amy Williams  <alw@genetics.med.harvard.edu>
+
+    * Support for PLINK BED genotype input data
+
+    * Support for phased results in IMPUTE2 format
+
+    * Trio/duo individuals can only be included using PLINK BED input data
+
+    * Offset for the first iteration is random, not always 0
+
+    * vote-phase:
+    genotype file is no longer needed on input
+    support for IMPUTE2 format phased input
+
+    * Bug fix: don't increase the window size beyond the total number of
+    markers included; cap at 1/2 the total number of markers
+
+    * Minor bug fix for calculating recombination probability: must subtract
+    the number of duos from 2 * number of samples to get the true number of
+    haplotypes (duos have one identical haplotype)
+
+    * Minor bug fix to random initialization: initialize trio parents
+    together to ensure their haplotypes are consistent with the trio child's
+    genotypes.  (Otherwise the first iteration can crash.)
+
+2012-08-17  Amy Williams  <alw@genetics.med.harvard.edu>
+
+    * First major release
+
