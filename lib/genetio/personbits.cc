@@ -48,6 +48,11 @@ PersonBits::PersonBits(char *id, char gender, int popIndex, int numHapChunks,
 
     _sampledHaplotypes = NULL;
 
+    if (_idToPerson.lookup(_id)) {
+      fprintf(stderr, "\nERROR: multiple individuals with id %s!\n", _id);
+      exit(3);
+    }
+
     _idToPerson.add(_id, this);
   }
 }

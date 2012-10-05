@@ -1,0 +1,4 @@
+option to omit family id when reading PLINK .fam files
+quasi-bug fix: no longer ignore existing parental relationship if one parent
+  does not exist in the dataset but one does (i.e., treat as duo)
+print error and quit if two individuals have the same id

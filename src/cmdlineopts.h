@@ -8,8 +8,8 @@
 #ifndef CMDLINEOPTS_H
 #define CMDLINEOPTS_H
 
-#define VERSION_NUMBER	"1.01"
-#define RELEASE_DATE    "27 Sep 2012"
+#define VERSION_NUMBER	"1.02"
+#define RELEASE_DATE    "NOT"
 
 class CmdLineOpts {
   public:
@@ -50,6 +50,10 @@ class CmdLineOpts {
 
     // Print in IMPUTE2 format?
     static int useImpute2Format;
+
+    // When reading a PLINK format BED file, do not print the family ids
+    // in the output file
+    static int noFamilyId;
 
     // Effective population size
     static int N_e;

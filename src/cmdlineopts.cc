@@ -23,6 +23,7 @@ int   CmdLineOpts::lastWindowSize = -1;
 int   CmdLineOpts::printLogLikelihoods = 0;
 char *CmdLineOpts::outFile = NULL;
 int   CmdLineOpts::useImpute2Format = 0;
+int   CmdLineOpts::noFamilyId = 0;
 int   CmdLineOpts::N_e = 10000; // Human effective pop size default 10,000
 int   CmdLineOpts::onlyChr = 0;
 int   CmdLineOpts::startPos = 0;
@@ -65,6 +66,7 @@ bool CmdLineOpts::parseCmdLineOptions(int argc, char **argv) {
     {"start", required_argument, NULL, START_POS},
     {"end", required_argument, NULL, END_POS},
     {"impute2", no_argument, &CmdLineOpts::useImpute2Format, 1},
+    {"no_family_id", no_argument, &CmdLineOpts::noFamilyId, 1},
     {"seed", required_argument, NULL, RAND_SEED},
     {0, 0, 0, 0}
   };
@@ -304,6 +306,8 @@ void CmdLineOpts::printUsage(FILE *out, char *programName) {
   fprintf(out, "  --end <#>\t\tend position on given chromosome\n");
   fprintf(out, "\n");
   fprintf(out, "  --impute2\t\tprint phase results in IMPUTE2 format\n");
+  fprintf(out, "  --no_family_id\tignore family ids from PLINK .fam file --\n");
+  fprintf(out, "\t\t\tdefault PLINK ids are of the form \"family_id:person_id\"\n");
   fprintf(out, "\n");
 #ifdef STATS
   fprintf(out, "  --trio-phase\t\tprint simple trio phase to output file and quit\n");

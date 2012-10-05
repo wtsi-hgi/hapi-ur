@@ -49,7 +49,8 @@ void PersonIO<P>::readIndivs(FILE *in, dynarray<P *> &personList) {
 // otherwise.  If true, must call findTrioDuos() after reading the genotype
 // data.
 template <class P>
-bool PersonIO<P>::readFamFile(FILE *in, dynarray<P *> &personList) {
+bool PersonIO<P>::readFamFile(FILE *in, dynarray<P *> &personList,
+			      bool omitFamilyId) {
   bool hasNonZeroParents = false;
 
   char familyid[81], personid[81], parentsids[2][81];
@@ -72,8 +73,6 @@ bool PersonIO<P>::readFamFile(FILE *in, dynarray<P *> &personList) {
     int popIndex = (pheno < 0) ? 0 : pheno;
     assert(popIndex <= 2);
 
-    sprintf(fullid, "%s:%s", familyid, personid);
-    
     char genderc;
     if (gender == 1)
       genderc = 'M';
@@ -81,8 +80,16 @@ bool PersonIO<P>::readFamFile(FILE *in, dynarray<P *> &personList) {
       genderc = 'F';
     else
       genderc = 'U';
-    short familyIdLength = strlen(familyid);
-    P *p = new P(fullid, genderc, popIndex, numHapChunks, familyIdLength);
+
+    P *p;
+    if (omitFamilyId) {
+      p = new P(personid, genderc, popIndex, numHapChunks);
+    }
+    else {
+      sprintf(fullid, "%s:%s", familyid, personid);
+      short familyIdLength = strlen(familyid);
+      p = new P(fullid, genderc, popIndex, numHapChunks, familyIdLength);
+    }
     personList.append(p);
 
     hasNonZeroParents |= strcmp(parentsids[0], "0") == 0 ||
@@ -101,10 +108,13 @@ bool PersonIO<P>::readFamFile(FILE *in, dynarray<P *> &personList) {
 // otherwise.  If true, must call findTrioDuos() after reading the genotype
 // data.
 template <class P>
-void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList) {
+void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList,
+			       bool omitFamilyId) {
   char familyid[81], parentsids[2][81];
   char fullid[162];
   int numDuos = 0;
+
+  bool warningPrinted = false; // have we printed a warning yet?
 
   /////////////////////////////////////////////////////////////////////////////
   // Now go through the file again and setup the trio and duo relationships
@@ -118,6 +128,11 @@ void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList) {
 
     if (thePerson->getTrioDuoType() == TRIO_CHILD ||
 				     thePerson->getTrioDuoType() == DUO_CHILD) {
+      if (!warningPrinted) {
+	printf("\n");
+	fprintf(log, "\n");
+	warningPrinted = true;
+      }
       fprintf(stderr, "ERROR: multiple definitions of relationships for person %s\n",
 	      thePerson->getId());
       exit(1);
@@ -132,6 +147,7 @@ void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList) {
 
     // do we have genotype data for the non-zero parents?  how many parents?
     int numParents = 0;
+    bool missingParents = false;
     P *parents[2] = { NULL, NULL };
     for(int p = 0; p < 2; p++) {
       if (strcmp(parentsids[p], "0") == 0)
@@ -139,25 +155,48 @@ void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList) {
 
       numParents++;
 
-      sprintf(fullid, "%s:%s", familyid, parentsids[p]);
-      parents[p] = P::lookupId(fullid);
+      char *curParId;
+      if (omitFamilyId) {
+	curParId = parentsids[p];
+      }
+      else {
+	sprintf(fullid, "%s:%s", familyid, parentsids[p]);
+	curParId = fullid;
+      }
+      parents[p] = P::lookupId(curParId);
 
       if (parents[p] == NULL) {
+	if (!warningPrinted) {
+	  printf("\n");
+	  fprintf(log, "\n");
+	  warningPrinted = true;
+	}
 	printf("WARNING: parent id %s of person %s does not exist\n",
-	       parentsids[p], thePerson->getId());
-	printf("  no family relationships included for child %s: assuming unrelated\n",
-	       thePerson->getId());
+	       curParId, thePerson->getId());
 	fprintf(log, "WARNING: parent id %s of person %s does not exist\n",
-	       parentsids[p], thePerson->getId());
-	fprintf(log, "  no family relationships included for child %s: assuming unrelated\n",
-	       thePerson->getId());
-	numParents = -1;
-	break;
+	       curParId, thePerson->getId());
+	missingParents = true;
+	numParents--;
       }
     }
 
-    if (numParents <= 0)
+    if (numParents == 0) {
+      assert(missingParents); // must be true
+      printf("  no family relationships included for child %s: treating as unrelated\n",
+	       thePerson->getId());
+      fprintf(log, "  no family relationships included for child %s: treating as unrelated\n",
+	       thePerson->getId());
       continue;
+    }
+    else if (missingParents) {
+      assert(numParents == 1); // must be true
+      printf("  only one parent for for child %s: treating as duo\n",
+	       thePerson->getId());
+      fprintf(log, "  only one parent for child %s: treating as duo\n",
+	       thePerson->getId());
+    }
+
+    assert(numParents > 0);
 
     if (numParents == 2)
       thePerson->setTrioDuoType(TRIO_CHILD);
@@ -171,20 +210,35 @@ void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList) {
 	continue;
 
       if (p == 0 && parents[p] != NULL && parents[p]->getGender() == 'F') {
+	if (!warningPrinted) {
+	  printf("\n");
+	  fprintf(log, "\n");
+	  warningPrinted = true;
+	}
 	printf("WARNING: father id %s is listed as female elsewhere\n",
-	       parentsids[p]);
+	       parents[p]->getId());
 	fprintf(log, "WARNING: father id %s is listed as female elsewhere\n",
-	       parentsids[p]);
+	       parents[p]->getId());
       }
       if (p == 1 && parents[p] != NULL && parents[p]->getGender() == 'M') {
+	if (!warningPrinted) {
+	  printf("\n");
+	  fprintf(log, "\n");
+	  warningPrinted = true;
+	}
 	printf("WARNING: mother id %s is listed as male elsewhere\n",
-	       parentsids[p]);
+	       parents[p]->getId());
 	fprintf(log, "WARNING: mother id %s is listed as male elsewhere\n",
-	       parentsids[p]);
+	       parents[p]->getId());
       }
 
       // ensure this parent isn't part of another trio/duo relationship:
       if (parents[p]->getTrioDuoType() != UNRELATED) {
+	if (!warningPrinted) {
+	  printf("\n");
+	  fprintf(log, "\n");
+	  warningPrinted = true;
+	}
 	fprintf(stderr, "ERROR: parent %s is a member of another trio or duo\n",
 		parents[p]->getId());
 	exit(1);
@@ -256,11 +310,11 @@ void PersonIO<P>::parsePackedAncestryMapFormat(FILE *in,
 
   sscanf(buf, "GENO %d %d %x %x", &fNumIndivs, &fNumMarkers, &ihash, &shash);
   if (fNumIndivs != numIndivs) {
-    fprintf(stderr, "ERROR: Number of individuals do not match in indiv and genotype files.\n");
+    fprintf(stderr, "\nERROR: Number of individuals do not match in indiv and genotype files.\n");
     exit(1);
   }
   if (fNumMarkers != Marker::getNumMarkersInFile()) {
-    fprintf(stderr, "ERROR: Number of markers do not match in snp and genotype files.\n");
+    fprintf(stderr, "\nERROR: Number of markers do not match in snp and genotype files.\n");
     exit(1);
   }
 
@@ -287,7 +341,7 @@ void PersonIO<P>::parsePackedGenotypes(FILE *in, int recordLen, char *buf,
   for(int i = 0; i < Marker::getFirstStoredMarkerFileIdx(); i++) {
     ret = fread(buf, recordLen, sizeof(char), in);
     if (ret == 0) {
-      fprintf(stderr, "ERROR reading from geno file\n");
+      fprintf(stderr, "\nERROR reading from geno file\n");
       exit(1);
     }
   }
@@ -316,7 +370,7 @@ void PersonIO<P>::parsePackedGenotypes(FILE *in, int recordLen, char *buf,
   for( ; curMarkerIdx < numMarkersToRead; curMarkerIdx++) {
     ret = fread(buf, recordLen, sizeof(char), in);
     if (ret == 0) {
-      fprintf(stderr, "ERROR reading from geno file\n");
+      fprintf(stderr, "\nERROR reading from geno file\n");
       exit(1);
     }
 
@@ -409,7 +463,7 @@ void PersonIO<P>::parseEigenstratFormat(FILE *in, dynarray<P *> &personList) {
     ret = fread(buf, numSamples+1, sizeof(char), in);
     assert(buf[numSamples] == '\n'); // should have endline here
     if (ret == 0) {
-      fprintf(stderr, "ERROR reading from geno file\n");
+      fprintf(stderr, "\nERROR reading from geno file\n");
       exit(1);
     }
   }
@@ -443,7 +497,7 @@ void PersonIO<P>::parseEigenstratFormat(FILE *in, dynarray<P *> &personList) {
     ret = fread(buf, numSamples+1, sizeof(char), in);
     assert(buf[numSamples] == '\n'); // should have endline here
     if (ret == 0) {
-      fprintf(stderr, "ERROR reading from geno file\n");
+      fprintf(stderr, "\nERROR reading from geno file\n");
       exit(1);
     }
 
@@ -465,7 +519,7 @@ void PersonIO<P>::parseEigenstratFormat(FILE *in, dynarray<P *> &personList) {
 
       // the genotype
       if (c != '0' && c != '1' && c != '2' && c != '9') {
-	fprintf(stderr, "ERROR: bad character in genotype file: %c\n", c);
+	fprintf(stderr, "\nERROR: bad character in genotype file: %c\n", c);
 	exit(1);
       }
       int genotype = c - '0'; // convert to number instead of character
@@ -513,12 +567,12 @@ void PersonIO<P>::parseEigenstratFormat(FILE *in, dynarray<P *> &personList) {
 template <class P>
 void PersonIO<P>::parsePlinkBedFormat(FILE *in, dynarray<P *> &personList) {
   if (fgetc(in) != 108 || fgetc(in) != 27) { // check for PLINK BED magic header
-    fprintf(stderr, "ERROR: reading PLINK BED: magic header missing is this a PLINK BED file?\n");
+    fprintf(stderr, "\nERROR: reading PLINK BED: magic header missing is this a PLINK BED file?\n");
     exit(2);
   }
 
   if (fgetc(in) != 1) {
-    fprintf(stderr, "ERROR: PLINK BED file in individual-major mode\n");
+    fprintf(stderr, "\nERROR: PLINK BED file in individual-major mode\n");
     fprintf(stderr, "File type not supported; use PLINK to convert to SNP-major mode\n");
     exit(2);
   }

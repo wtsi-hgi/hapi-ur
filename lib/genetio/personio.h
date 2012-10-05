@@ -18,8 +18,10 @@ class PersonIO {
     //////////////////////////////////////////////////////////////////
 
     static void readIndivs(FILE *in, dynarray<P *> &personList);
-    static bool readFamFile(FILE *in, dynarray<P *> &personList);
-    static void findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList);
+    static bool readFamFile(FILE *in, dynarray<P *> &personList,
+			    bool omitFamilyId);
+    static void findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList,
+			     bool ommitFamilyId);
     static void removeIgnoreIndivsAndTrioKids(dynarray<P *> &personList);
     static void printEigenstratGeno(FILE *out);
     static void printEigenstratPhased(FILE *out, int numSamples = -1);

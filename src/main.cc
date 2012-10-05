@@ -299,7 +299,8 @@ void readData(bool printGenetLength, FILE *log) {
   else {
     assert(fileType == 2);
     mightHaveParents =
-	    PersonIO<PersonBits>::readFamFile(indivIn, PersonBits::_allIndivs);
+	    PersonIO<PersonBits>::readFamFile(indivIn, PersonBits::_allIndivs,
+					      CmdLineOpts::noFamilyId);
   }
   printf("done.\n");
   if (log)
@@ -331,7 +332,8 @@ void readData(bool printGenetLength, FILE *log) {
   if (mightHaveParents) {
     printf("Rereading fam file to identify and infer unambiguous trio/duo phase... ");
     fprintf(log, "Rereading fam file to identify and infer unambiguous trio/duo phase... ");
-    PersonIO<PersonBits>::findTrioDuos(indivIn, log, PersonBits::_allIndivs);
+    PersonIO<PersonBits>::findTrioDuos(indivIn, log, PersonBits::_allIndivs,
+				       CmdLineOpts::noFamilyId);
     printf("done.\n");
     if (log)
       fprintf(log, "done.\n");
