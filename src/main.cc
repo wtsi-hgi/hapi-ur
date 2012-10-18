@@ -16,7 +16,8 @@
 #include "driver.h"
 
 void readData(bool printGenetLength = false, FILE *log = NULL);
-void exitIfFileExists(char *filename);
+void checkIfFileExists(char *filename, bool printWarning);
+void printPhaseType(FILE *out);
 
 int main(int argc, char **argv) {
   bool success = CmdLineOpts::parseCmdLineOptions(argc, argv);
@@ -34,21 +35,21 @@ int main(int argc, char **argv) {
     if (CmdLineOpts::useImpute2Format) {
       // Check whether the .haps output file exists:
       sprintf(filename, "%s.haps", CmdLineOpts::outFile);
-      exitIfFileExists(filename);
+      checkIfFileExists(filename, CmdLineOpts::forceWrite);
       // Check whether the .sample output file exists:
       sprintf(filename, "%s.sample", CmdLineOpts::outFile);
-      exitIfFileExists(filename);
+      checkIfFileExists(filename, CmdLineOpts::forceWrite);
     }
     else {
       // Check whether the phgeno output file exists:
       sprintf(filename, "%s.phgeno", CmdLineOpts::outFile);
-      exitIfFileExists(filename);
+      checkIfFileExists(filename, CmdLineOpts::forceWrite);
       // Check whether the phind output file exists:
       sprintf(filename, "%s.phind", CmdLineOpts::outFile);
-      exitIfFileExists(filename);
+      checkIfFileExists(filename, CmdLineOpts::forceWrite);
       // Check whether the phsnp output file exists:
       sprintf(filename, "%s.phsnp", CmdLineOpts::outFile);
-      exitIfFileExists(filename);
+      checkIfFileExists(filename, CmdLineOpts::forceWrite);
     }
 
     // open the .log file for writing
@@ -214,6 +215,11 @@ int main(int argc, char **argv) {
 
     printf("done.\n");
     fprintf(log, "done.\n");
+
+    // Log the type of phasing that was done for each sample (e.g., Unrelated,
+    // duo, etc.)
+    printPhaseType(log);
+
     fclose(log);
   }
 }
@@ -341,14 +347,64 @@ void readData(bool printGenetLength, FILE *log) {
 
   fclose(indivIn);
 
-  PersonIO<PersonBits>::removeIgnoreIndivsAndTrioKids(PersonBits::_allIndivs);
+  PersonIO<PersonBits>::removeIgnoreIndivsAndTrioKids(PersonBits::_allIndivs,
+						    CmdLineOpts::printTrioKids);
 }
 
-void exitIfFileExists(char *filename) {
+void checkIfFileExists(char *filename, bool printWarning) {
   struct stat buffer;
   if (stat( filename, &buffer) == 0) {
-    fprintf(stderr, "Error: output filename %s exists; won't overwrite so dying...\n",
-	filename);
-    exit(1);
+    if (printWarning) {
+      fprintf(stderr, "WARNING: output filename %s exists; --force set, so overwriting\n",
+	      filename);
+    }
+    else {
+      fprintf(stderr, "ERROR: output filename %s exists; won't overwrite so dying...\n",
+	      filename);
+      exit(1);
+    }
+  }
+}
+
+void printPhaseType(FILE *out) {
+  fprintf(out, "\nPhasing type for each individual:\n");
+  int numSamples = PersonBits::_allIndivs.length();
+  for(int i = 0; i < numSamples; i++) {
+    PersonBits *thePerson = PersonBits::_allIndivs[i];
+    fprintf(out, "%s ", thePerson->getId());
+    if (thePerson->getTrioDuoType() == UNRELATED) {
+      fprintf(out, "Unrelated\n");
+    }
+    else if (thePerson->getTrioDuoType() == DUO_CHILD) {
+      fprintf(out, "Duo-C\n");
+    }
+    else if (thePerson->getTrioDuoType() == TRIO_CHILD) {
+      fprintf(out, "Trio-C\n");
+    }
+    else { // parent!
+      char parentType;
+      if (thePerson->getGender() == 'M')
+	parentType = 'F';
+      else if (thePerson->getGender() == 'F')
+	parentType = 'M';
+      else
+	parentType = 'U';
+
+      if (thePerson->getTrioDuoType() == PARENT_1) // definitely trio
+	fprintf(out, "Trio-%c\n", parentType);
+      else {
+	assert(thePerson->getTrioDuoType() == PARENT_0);
+
+	// is this the parent of a duo or a trio?
+	if (thePerson->getTrioDuoOther()->getTrioDuoType() == DUO_CHILD) {//duo!
+	  fprintf(out, "Duo-%c\n", parentType);
+	}
+	else { // trio!
+	  assert(thePerson->getTrioDuoOther()->getTrioDuoType() == PARENT_1);
+	  fprintf(out, "Trio-%c\n", parentType);
+	}
+      }
+
+    }
   }
 }

@@ -22,7 +22,8 @@ class PersonIO {
 			    bool omitFamilyId);
     static void findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList,
 			     bool ommitFamilyId);
-    static void removeIgnoreIndivsAndTrioKids(dynarray<P *> &personList);
+    static void removeIgnoreIndivsAndTrioKids(dynarray<P *> &personList,
+					      bool keepTrioKids);
     static void printEigenstratGeno(FILE *out);
     static void printEigenstratPhased(FILE *out, int numSamples = -1);
     static void printPhasedIndFile(FILE *out, bool trioDuoOnly = false);

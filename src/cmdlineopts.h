@@ -8,7 +8,7 @@
 #ifndef CMDLINEOPTS_H
 #define CMDLINEOPTS_H
 
-#define VERSION_NUMBER	"1.02"
+#define VERSION_NUMBER	"1.01.5"
 #define RELEASE_DATE    "NOT"
 
 class CmdLineOpts {
@@ -79,6 +79,13 @@ class CmdLineOpts {
     
     // Print the first number of samples between iterations?  For profiling
     static int printIntermediateNum;
+
+    // Force write of output files?  By default the following is false, and
+    // HAPI-UR quits if any of the output files exist (except the log file)
+    static int forceWrite;
+
+    // Print trio children?  Defaults to false
+    static int printTrioKids;
 };
 
 #endif // CMDOPTIONS_H

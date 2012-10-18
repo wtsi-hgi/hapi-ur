@@ -22,13 +22,15 @@ void Phaser::init() {
   MarkerIndex::init();
 
   int numSamples = PersonBits::_allIndivs.length();
-  // NOTE: we subtract the number of duos from 2 * <numSamples> because
-  // duo children only have the non-transmitted haplotype seeded.  The
-  // transmitted haplotype is shared identically between the parent and the
-  // child, so they are completely dependent on each other.  The following
-  // avoids double counting this identical haplotype:
-  _numHaplotypes = (2 * numSamples - PersonBits::_numDuos) *
-						      NUM_HAPLOTYPES_TO_SAMPLE;
+  // NOTE: we subtract the number of trio kids from <numSamples> since these
+  // kids are phased through their parents and are completely dependent on them
+  // we also subtract the number of duos from 2 * <numSamples> because duo
+  // children only have the non-transmitted haplotype seeded.  The transmitted
+  // haplotype is shared identically between the parent and the child, so they
+  // are completely dependent on each other.  The following avoids double
+  // counting this identical haplotype:
+  _numHaplotypes = (2 * (numSamples - PersonBits::_numTrioKids) -
+		      PersonBits::_numDuos) * NUM_HAPLOTYPES_TO_SAMPLE;
 
   for(int p = 0; p < 2; p++) {
     _validStateIndexes[p].resize(MarkerIndex::_curBitSetSize);

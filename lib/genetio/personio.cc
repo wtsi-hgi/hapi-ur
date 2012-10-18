@@ -113,6 +113,7 @@ void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList,
   char familyid[81], parentsids[2][81];
   char fullid[162];
   int numDuos = 0;
+  int numTrios = 0;
 
   bool warningPrinted = false; // have we printed a warning yet?
 
@@ -198,8 +199,10 @@ void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList,
 
     assert(numParents > 0);
 
-    if (numParents == 2)
+    if (numParents == 2) {
       thePerson->setTrioDuoType(TRIO_CHILD);
+      numTrios++;
+    }
     else {
       thePerson->setTrioDuoType(DUO_CHILD);
       numDuos++;
@@ -264,12 +267,18 @@ void PersonIO<P>::findTrioDuos(FILE *in, FILE *log, dynarray<P *> &personList,
   }
 
   P::_numDuos = numDuos;
+  P::_numTrioKids = numTrios;
 }
 
 // Removes from <personList> any individuals with the _ignore field set to true
 // and trio children (with _parents set)
 template <class P>
-void PersonIO<P>::removeIgnoreIndivsAndTrioKids(dynarray<P *> &personList) {
+void PersonIO<P>::removeIgnoreIndivsAndTrioKids(dynarray<P *> &personList,
+						bool keepTrioKids) {
+  if (!keepTrioKids) {
+    P::_numTrioKids = 0; // no trio kids after this method runs
+  }
+
   // Remove individuals marked as "Ignore", preserving the same order of indivs
   int length = personList.length();
   // how many indivs forward should we look to find the current indiv?
@@ -279,13 +288,18 @@ void PersonIO<P>::removeIgnoreIndivsAndTrioKids(dynarray<P *> &personList) {
       personList[p] = personList[ p + shiftIdx ];
 
     P *cur = personList[p];
-    if (cur->isIgnore() || cur->getTrioDuoType() == TRIO_CHILD) {
+    if (cur->isIgnore() || (cur->getTrioDuoType() == TRIO_CHILD &&
+							      !keepTrioKids)) {
       delete cur;
       shiftIdx++; // should look one more indiv forward to find the indiv at <p>
       // examine this index again as it now references a different indiv:
       p--;
       length--;
     }
+    else if (cur->getTrioDuoType() == TRIO_CHILD)
+      // need not retain genotype data for trio child, even though we are
+      // keeping the child's entry for later printing
+      cur->empty();
   }
 
   // shorten <personList> by the number of removed indivs:
@@ -638,6 +652,17 @@ void PersonIO<P>::printEigenstratPhased(FILE *out, int numSamples) {
     }
 
     for(int i = 0; i < numIndivs; i++) {
+      if (P::_allIndivs[i]->getTrioDuoType() == TRIO_CHILD) {
+	P *parents[2];
+	parents[0] = (P *) P::_allIndivs[i]->_tdData;
+	parents[1] = parents[0]->getTrioDuoOther();
+	for(int h = 0; h < 2; h++) {
+	  // Note: 0'th haplotype in parent is transmitted haplotype
+	  int hapAllele = parents[h]->getHapAllele(0, curHapChunk, curChunkIdx);
+	  fprintf(out, "%d", hapAllele);
+	}
+      }
+
       if (!P::_allIndivs[i]->isPhased())
 	// this sample was not phased
 	continue;
@@ -660,15 +685,11 @@ void PersonIO<P>::printPhasedIndFile(FILE *out, bool trioDuoOnly) {
   int numIndivs = P::_allIndivs.length();
   for(int ind = 0; ind < numIndivs; ind++) {
     P *thePerson = P::_allIndivs[ind];
-    if (thePerson->isIgnore()) // sample ignored; don't print
-      continue;
+    assert(!thePerson->isIgnore()); // sample ignored, should have been deleted
     // if <trioDuoOnly> only print phase for the parents of trios or duos -- no
     // unrelateds
     if (trioDuoOnly && thePerson->getTrioDuoType() == UNRELATED)
       continue;
-
-    // trio children should have been deleted by now:
-    assert(thePerson->getTrioDuoType() != TRIO_CHILD);
 
     int idLength = strlen(thePerson->getId());
     for(int h = 0; h < 2; h++) {
@@ -703,6 +724,17 @@ void PersonIO<P>::printImpute2Haps(FILE *out) {
 
     // print haplotypes:
     for(int i = 0; i < numIndivs; i++) {
+      if (P::_allIndivs[i]->getTrioDuoType() == TRIO_CHILD) {
+	P *parents[2];
+	parents[0] = (P *) P::_allIndivs[i]->_tdData;
+	parents[1] = parents[0]->getTrioDuoOther();
+	for(int h = 0; h < 2; h++) {
+	  // Note: 0'th haplotype in parent is transmitted haplotype
+	  int hapAllele = parents[h]->getHapAllele(0, curHapChunk, curChunkIdx);
+	  fprintf(out, " %d", hapAllele);
+	}
+      }
+
       if (!P::_allIndivs[i]->isPhased())
 	// this sample was not phased
 	continue;
@@ -727,15 +759,12 @@ void PersonIO<P>::printImpute2SampleFile(FILE *out, bool trioDuoOnly) {
   int numIndivs = P::_allIndivs.length();
   for(int ind = 0; ind < numIndivs; ind++) {
     P *thePerson = P::_allIndivs[ind];
-    if (thePerson->isIgnore()) // sample ignored; don't print
-      continue;
+    assert(!thePerson->isIgnore()); // sample ignored, should have been deleted
+
     // if <trioDuoOnly> only print phase for the parents of trios or duos -- no
     // unrelateds
     if (trioDuoOnly && thePerson->getTrioDuoType() == UNRELATED)
       continue;
-
-    // trio children should have been deleted by now:
-    assert(thePerson->getTrioDuoType() != TRIO_CHILD);
 
     // Print family id (using printf substring trick) and individual id
     int familyIdLength = thePerson->getFamilyIdLength();

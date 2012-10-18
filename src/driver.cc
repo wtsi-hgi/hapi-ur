@@ -70,13 +70,20 @@ void Driver::doPhase(FILE *log) {
 
   printf("\n");
   printf("Phasing %d samples on %d markers.\n", numSamples,
-	  Marker::getNumMarkers());
+	 Marker::getNumMarkers());
+  if (PersonBits::_numTrioKids > 0)
+    printf("  (includes %d trio children implicitly phased via their parents)\n",
+	   PersonBits::_numTrioKids);
   printf("Last window size is: %d\n", lastWinSize);
   printf("Number of iterations: %d\n", numIters);
 
   fprintf(log, "\n");
   fprintf(log, "Phasing %d samples on %d markers.\n", numSamples,
 	  Marker::getNumMarkers());
+  if (PersonBits::_numTrioKids > 0)
+    fprintf(log,
+	    "  (includes %d trio children implicitly phased via their parents)\n",
+	    PersonBits::_numTrioKids);
   fprintf(log, "Last window size is: %d\n", lastWinSize);
   fprintf(log, "Number of iterations: %d\n", numIters);
 

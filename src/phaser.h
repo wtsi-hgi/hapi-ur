@@ -247,6 +247,9 @@ double Phaser::getSparseTxProb(double prevLogUnweightedRecombProb,
 template <class S, class eqS>
 void Phaser::seedHaploidHMM(HMMs<S,eqS> *hmms, int id) {
   PersonBits *thePerson = PersonBits::_allIndivs[id];
+  
+  if (thePerson->getTrioDuoType() == TRIO_CHILD)
+    return;
 
   bool isDuoChild = thePerson->getTrioDuoType() == DUO_CHILD;
 
@@ -568,8 +571,6 @@ void Phaser::seedBitSets(HMMs<S,eqS> *hmms) {
 // likelihoods (from the frequency) as well as the transition probabilities.
 template <class S, class eqS>
 void Phaser::setHMMLikelihoods(HMMs<S,eqS> *hmms) {
-  int numSamples = PersonBits::_allIndivs.length();
-
   for(int window = 0; window < hmms->_numWindows; window++) {
     Window<S,eqS> *curWindow = hmms->_haploidHMM[window];
 
@@ -586,13 +587,8 @@ void Phaser::setHMMLikelihoods(HMMs<S,eqS> *hmms) {
 	// epsilon probability of recombining even when genetic map suggests
 	// this is impossible:
 	genetDist = 10e-10;
-      // NOTE: we subtract the number of duos from 2 * <numSamples> because
-      // duo children only have the non-transmitted haplotype seeded.  The
-      // transmitted haplotype is shared identically between the parent and the
-      // child, so they are completely dependent on each other.  The following
-      // avoids double counting this identical haplotype:
       double nonRecombProb = exp(-4 * CmdLineOpts::N_e * genetDist /
-				 (2 * numSamples - PersonBits::_numDuos));
+				 (_numHaplotypes / NUM_HAPLOTYPES_TO_SAMPLE));
       curWindow->_logUnweightedRecombProb = log(1.0 - nonRecombProb);
 
       for(uint i = 0; i < length; i++) {
@@ -623,9 +619,11 @@ void Phaser::phaseIndividual(HMMs<S,eqS> *hmms, int id, bool lastIter,
 			     double maxStatePropMissingData) {
   PersonBits *thePerson = PersonBits::_allIndivs[id];
   // Trio PARENT_1 is phased along with PARENT_0; DUO_CHILD is phased along
-  // with PARENT_0, so skip them here.
+  // with PARENT_0; TRIO_CHILD is implicitly phased through its parents, so
+  // skip them here.
   if (thePerson->getTrioDuoType() == PARENT_1 ||
-				    thePerson->getTrioDuoType() == DUO_CHILD)
+			    thePerson->getTrioDuoType() == DUO_CHILD ||
+			    thePerson->getTrioDuoType() == TRIO_CHILD)
     return;
 
   bool isTrio = false, isDuo = false;
@@ -945,8 +943,6 @@ void Phaser::phaseIndividual(HMMs<S,eqS> *hmms, int id, bool lastIter,
 
     Window<S,eqS> *curWindow = hmms->_haploidHMM[window];
 
-    // Note: only need to set one of the values because the other falls out by
-    // subtraction
     DipState<S> &maxViterbiState = (*curWinStates)[maxViterbiIdx];
     int viterbiInvertLink = invertV1 ? 1 : 0;
 
@@ -2100,7 +2096,7 @@ void Phaser::calcAlphaOrViterbiLikelihoods(HMMs<S,eqS> *hmms, int window,
     // there is only one phase option.  There is also only one phase option for
     // homozygous states.
     int numPhaseOptions = 2;
-    if (isTrio || isDuo || prevState.v[0] == prevState.v[1])
+    if (isTrio || isDuo)
       numPhaseOptions = 1;
 
     for(int c = 0; c < hmms->_indivHMM[window]->length(); c++) { // cur states
@@ -2211,18 +2207,17 @@ void Phaser::calcAlphaOrViterbiLikelihoods(HMMs<S,eqS> *hmms, int window,
     alphaIsDefined = true;
   }
 
-  // Must double heterozygous states' alpha value since the two states are
-  // lumped into one (only applies if not a trio or duo)
-  // Note: must do this after the code above executes so that we double the
-  // final alpha value
-  if (!(isTrio || isDuo)) {
-    for(int c = 0; c < hmms->_indivHMM[window]->length(); c++) { // cur states
-      DipState<S> &curState = (*hmms->_indivHMM[window])[c];
-      if (curState.v[0] != curState.v[1])
-	curState.alpha += log_2;
-    }
-  }
-
+  // Note: there is no need to double heterozygous state's alpha value at this
+  // point.  We accounted for both possible phasings in calculating transition
+  // probabilities, and since the initial states that were heterozygous were
+  // doubled (+= log_2 above), everything works out.  Proof sketch (by
+  // induction): Assume states in previous window have correct alpha value
+  // for merged states, then the two phase possibilities for any current
+  // heterozygous states get merged above since we calculate transition
+  // probabilities for both possibilities and sum them.  For homozygous states,
+  // there is only one phase possibility from any previous state, and this
+  // is the value that is stored.  Since the initial state is doubled for
+  // heterozygous states and not for homozygous states, merging works.
 
   // Could experiment with this: I think it may be too slow, but if not
   // it's probably worth doing.
@@ -2358,6 +2353,7 @@ void Phaser::sampleStates(dynarray< DipState<S> > *theStates,
   // Now sample the state for the current window:
   int numFound = 0;
   int numStates = 2 * theStates->length();
+  assert(numStates == _likelihoodSpaceAlphas[0].length());
   for(int c = 0; c < numStates && numFound < NUM_HAPLOTYPES_TO_SAMPLE; c++) {
     for(int s = 0; s < NUM_HAPLOTYPES_TO_SAMPLE; s++) {
       if (randValues[s] >= 0) {

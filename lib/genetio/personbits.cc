@@ -13,7 +13,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // initialize static members
 int PersonBits::_maxPersonIdLength = 0;
-int PersonBits::_numDuos;
+int PersonBits::_numDuos = 0;
+int PersonBits::_numTrioKids = 0;
 dynarray<PersonBits *> PersonBits::_allIndivs;
 Hashtable<char *, PersonBits *> PersonBits::_idToPerson(2003, stringHash,
 							stringcmp);
@@ -63,7 +64,7 @@ PersonBits::~PersonBits() {
     delete [] _homozyLoci;
     delete [] _knownHap;
     delete [] _missingLoci;
-    assert(_tdData == NULL);
+    assert(_tdData == NULL || getTrioDuoType() == TRIO_CHILD);
 //    if (_tdData != NULL) {
 //      delete [] _tdData->_tdKnownLoci;
 //      if (_tdData->_childIsHet != NULL)
@@ -73,6 +74,15 @@ PersonBits::~PersonBits() {
     assert(_resolvedHaplotype[0] == NULL);
     assert(_sampledHaplotypes == NULL);
   }
+}
+
+// Deletes genotype data for <this>.  Used for trio children after their data
+// were already used to infer the known phase of their parents
+void PersonBits::empty() {
+  delete [] _homozyLoci;
+  delete [] _knownHap;
+  delete [] _missingLoci;
+  _homozyLoci = _knownHap = _missingLoci = NULL;
 }
 
 // Infers trio and duo haplotypes for <child> and its parent(s):
@@ -89,6 +99,10 @@ void PersonBits::inferTrioDuoHaplotypes(PersonBits *child,
     parents[0]->allocTrioDuoData(isTrio, Marker::getNumHapChunks(),
 				 parents[1]);
     parents[1]->_tdData = parents[0]->_tdData;
+    // Note: cheap hack -- having this point to the parent, a PersonBits object,
+    // rather than a TrioDuoData object.  Doing this so that we don't need an
+    // extra field in all individuals
+    child->_tdData = (TrioDuoData *) parents[0];
   }
   else { // a duo
     parents[0]->allocTrioDuoData(isTrio, Marker::getNumHapChunks(),

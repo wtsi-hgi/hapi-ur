@@ -1,4 +1,12 @@
+bug fix: issue with likelihoods of merged diploid states:
+  - always have two phase possibilities for a state in a given window that is
+    heterozygous (incuding when the previous state is homozygous)
+  - should not double the probability of heterozygous states except at the
+    first window
+--print_trio_kids option for printing the trio children's haplotypes
 option to omit family id when reading PLINK .fam files
+--force option to be able to overwrite existing output files
+print phase type for all samples to log after all phasing results generated
 quasi-bug fix: no longer ignore existing parental relationship if one parent
   does not exist in the dataset but one does (i.e., treat as duo)
 print error and quit if two individuals have the same id

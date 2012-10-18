@@ -33,8 +33,9 @@ struct MarkerIndex {
 
   // We keep bitsets as small as possible, but will need to grow them
   // depending on the number of HapStates that exist.  The maximum number is
-  // 2 * numSamples * NUM_HAPLOTYPES_TO_SAMPLE, but making bitsets that large
-  // slow things, so we start small and grow as needed.
+  // 2 * numSamples * NUM_HAPLOTYPES_TO_SAMPLE (minus some related indivs),
+  // but making bitsets that large slow things, so we start small and grow as
+  // needed.
   static int _curBitSetSize;
 };
 

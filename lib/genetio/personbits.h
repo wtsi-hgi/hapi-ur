@@ -68,6 +68,8 @@ class PersonBits {
 	       short familyIdLength = 0);
     ~PersonBits();
 
+    void empty();
+
     chunk getKnownHaplotype(int chunkNum)
 	  { return _knownHap[chunkNum]; }
     chunk getKnownLoci(int chunkNum)
@@ -148,6 +150,7 @@ class PersonBits {
     static dynarray<const char *> _popLabels;
     static int _maxPersonIdLength;
     static int _numDuos;
+    static int _numTrioKids;
 
   private:
     //////////////////////////////////////////////////////////////////
