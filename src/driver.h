@@ -4,8 +4,8 @@
 // This program is distributed under the terms of the GNU General Public License
 
 #include <stdio.h>
+#include <amy/timer.h>
 #include "phaser.h"
-#include "timer.h"
 
 #ifndef DRIVER_H
 #define DRIVER_H
