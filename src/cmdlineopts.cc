@@ -33,6 +33,7 @@ uint  CmdLineOpts::randSeed;
 int   CmdLineOpts::writeStateInfo = 0;
 int   CmdLineOpts::printIntermediateNum = 0;
 int   CmdLineOpts::forceWrite = 0;
+int   CmdLineOpts::printTrioKids = 0;
 
 // Parses the command line options for the program.
 bool CmdLineOpts::parseCmdLineOptions(int argc, char **argv) {
@@ -70,6 +71,7 @@ bool CmdLineOpts::parseCmdLineOptions(int argc, char **argv) {
     {"no_family_id", no_argument, &CmdLineOpts::noFamilyId, 1},
     {"seed", required_argument, NULL, RAND_SEED},
     {"force", no_argument, &CmdLineOpts::forceWrite, 1},
+    {"print_trio_kids", no_argument, &CmdLineOpts::printTrioKids, 1},
     {0, 0, 0, 0}
   };
 
@@ -308,9 +310,12 @@ void CmdLineOpts::printUsage(FILE *out, char *programName) {
   fprintf(out, "  --end <#>\t\tend position on given chromosome\n");
   fprintf(out, "\n");
   fprintf(out, "  --impute2\t\tprint phase results in IMPUTE2 format\n");
+  fprintf(out, "  --force\t\tforce writing to output files (overwrite if they exist)\n");
+//  fprintf(out, "  --analyze-X\t\tcheck for IBD on X chromosome\n");
+  fprintf(out, "\n");
+  fprintf(out, "  --print_trio_kids\tprint the trio children's haplotypes\n");
   fprintf(out, "  --no_family_id\tignore family ids from PLINK .fam file --\n");
   fprintf(out, "\t\t\tdefault PLINK ids are of the form \"family_id:person_id\"\n");
-  fprintf(out, "  --force\t\tforce writing to output files (overwrite if they exist)\n");
   fprintf(out, "\n");
 #ifdef STATS
   fprintf(out, "  --trio-phase\t\tprint simple trio phase to output file and quit\n");
