@@ -474,15 +474,21 @@ class dense_hashtable {
   // True if the item at position bucknum is "empty" marker
   bool test_empty(size_type bucknum) const {
     assert(settings.use_empty());  // we always need to know what's empty!
-    return equals(get_key(val_info.emptyval), get_key(table[bucknum]));
+    // Amy edited for HAPI-UR:
+//    return equals(get_key(val_info.emptyval), get_key(table[bucknum]));
+    return NULL == get_key(table[bucknum]);
   }
   bool test_empty(const iterator &it) const {
     assert(settings.use_empty());  // we always need to know what's empty!
-    return equals(get_key(val_info.emptyval), get_key(*it));
+    // Amy edited for HAPI-UR:
+//    return equals(get_key(val_info.emptyval), get_key(*it));
+    return NULL == get_key(*it);
   }
   bool test_empty(const const_iterator &it) const {
     assert(settings.use_empty());  // we always need to know what's empty!
-    return equals(get_key(val_info.emptyval), get_key(*it));
+    // Amy edited for HAPI-UR:
+//    return equals(get_key(val_info.emptyval), get_key(*it));
+    return NULL == get_key(*it);
   }
 
  private:
@@ -925,8 +931,8 @@ class dense_hashtable {
   // If you know *this is big enough to hold obj, use this routine
   std::pair<iterator, bool> insert_noresize(const_reference obj) {
     // First, double-check we're not inserting delkey or emptyval
-    assert((!settings.use_empty() || !equals(get_key(obj),
-                                             get_key(val_info.emptyval)))
+    // Amy edited for HAPI-UR:
+    assert((!settings.use_empty() || NULL != get_key(obj))
            && "Inserting the empty key");
     assert((!settings.use_deleted() || !equals(get_key(obj), key_info.delkey))
            && "Inserting the deleted key");
