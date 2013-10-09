@@ -1,3 +1,5 @@
 .deps
 *.o
 *.a
+src/hapi-ur
+src/vote-phase
