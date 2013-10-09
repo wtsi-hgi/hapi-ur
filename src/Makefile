@@ -9,7 +9,7 @@ GCC = gcc
 #DEFINES= -DIBD
 #DEFINES= -DSTATS
 DEFINES= 
-INCLUDES= -I../include -I../lib
+INCLUDES= -I../include -I../lib -I../sparsehash/include
 #CFLAGS = -g -Wall $(DEFINES) $(INCLUDES)
 # optimized; remove asserts
 #CFLAGS = -O2 -Wall -DNDEBUG $(DEFINES) $(INCLUDES)
