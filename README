@@ -5,3 +5,10 @@ http://hapi-ur.googlecode.com/
 
 See especially the PDF manual linked from the homepage.
 
+Compiling
+---------
+$ make clean
+$ make
+
+Should yield binaries in src/hapi-ur and src/vote-phase
+
